@@ -16,9 +16,6 @@ Parameters:
   DBName:
     Type: String
     Description: Initial db name
-  LatestAmiId:
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 
 Resources:
   PostgresSG:
@@ -62,41 +59,37 @@ Resources:
       VPCSecurityGroups:
         - !Ref PostgresSG
       PubliclyAccessible: false
-
-  InstanceRole:
-    Type: AWS::IAM::Role
+  
+  Cluster:
+    Type: AWS::ECS::Cluster
     Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: [ec2.amazonaws.com]
-          Action: ['sts:AssumeRole']
-      Path: /
-      ManagedPolicyArns: [
-        'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
-      ]
-      Policies:
-      - PolicyName: ECS-CloudWatchLogs
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action: ['logs:CreateLogStream', 'logs:PutLogEvents',
-              'logs:DescribeLogStreams']
-            Resource: ['arn:aws:logs:*:*:*']
+      ClusterName: !Sub ${AWS::StackName}
 
-  InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      Path: /
-      Roles: [!Ref 'InstanceRole']
+      GroupDescription: Security Group for load balancers which need to route traffic
+        to container instances
+      VpcId: !ImportValue
+             'Fn::Sub': '${NetworkStackName}-VpcId'
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      Tags:
+      - Key: Name
+        Value: !Sub 'Load Balancer SG - ${AWS::StackName}'
 
   WebLoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
-      SecurityGroups: [!Ref 'WebLoadBalancerSG']
+      Type: application
+      Scheme: internet-facing
       Subnets:
         - !ImportValue
           'Fn::Sub': '${NetworkStackName}-Public-A-SubID'
@@ -104,91 +97,35 @@ Resources:
           'Fn::Sub': '${NetworkStackName}-Public-B-SubID'
         - !ImportValue
           'Fn::Sub': '${NetworkStackName}-Public-C-SubID'
-      Listeners:
-      - LoadBalancerPort: '80'
-        InstancePort: '80'
-        Protocol: HTTP
-      HealthCheck:
-        Target: HTTP:80/
-        HealthyThreshold: '3'
-        UnhealthyThreshold: '5'
-        Interval: '90'
-        Timeout: '60'
-
-  WebLoadBalancerSG:
-    Type: AWS::EC2::SecurityGroup
+      SecurityGroups: [!Ref 'LoadBalancerSecurityGroup']
+  
+  WebTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      GroupDescription: Public ELB Security Group with HTTP access on port 80 from
-        the internet
       VpcId: !ImportValue
-        'Fn::Sub': '${NetworkStackName}-VpcId'
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-
-  WebFleet:
-    Type: AWS::AutoScaling::AutoScalingGroup
+             'Fn::Sub': '${NetworkStackName}-VpcId'
+      Port: 80
+      Protocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+  
+  WebListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      AvailabilityZones:
-      - !GetAtt
-        - !ImportValue
-          'Fn::Sub': '${NetworkStackName}-Private-A-SubID'
-        - AvailabilityZone
-      VPCZoneIdentifier:
-        - !ImportValue
-          'Fn::Sub': '${NetworkStackName}-Private-A-SubID'
-      LaunchConfigurationName: !Ref 'WebFleetLaunchConfig'
-      MinSize: '1'
-      MaxSize: '2'
-      DesiredCapacity: 1
-      LoadBalancerNames: [!Ref 'WebLoadBalancer']
-
-  WebFleetLaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      ImageId: !Ref LatestAmiId
-      SecurityGroups: [!Ref 'WebFleetSG']
-      IamInstanceProfile:
-        !Ref InstanceProfile
-      InstanceType: t2.micro
-      KeyName: 'KeyName'
-      UserData:
-        Fn::Base64: !Sub |
-           yum install -y vim
-           
-  WebFleetSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow access from load balancer and bastion as well as outbound
-        HTTP and HTTPS traffic
-      VpcId: !ImportValue
-        'Fn::Sub': '${NetworkStackName}-VpcId'
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        SourceSecurityGroupId: !Ref 'WebLoadBalancerSG'
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
-        FromPort: '443'
-        ToPort: '443'
-        CidrIp: 0.0.0.0/0
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'WebTargetGroup'
+      LoadBalancerArn: !Ref 'WebLoadBalancer'
+      Port: '80'
+      Protocol: HTTP
   
   APILoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
-      SecurityGroups: [!Ref 'APILoadBalancerSG']
+      Type: application
+      Scheme: internet-facing
       Subnets:
         - !ImportValue
           'Fn::Sub': '${NetworkStackName}-Public-A-SubID'
@@ -196,86 +133,32 @@ Resources:
           'Fn::Sub': '${NetworkStackName}-Public-B-SubID'
         - !ImportValue
           'Fn::Sub': '${NetworkStackName}-Public-C-SubID'
-      Listeners:
-      - LoadBalancerPort: '80'
-        InstancePort: '80'
-        Protocol: HTTP
-      HealthCheck:
-        Target: HTTP:80/
-        HealthyThreshold: '3'
-        UnhealthyThreshold: '5'
-        Interval: '90'
-        Timeout: '60'
+      SecurityGroups: [!Ref 'LoadBalancerSecurityGroup']
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: false
 
-  APILoadBalancerSG:
-    Type: AWS::EC2::SecurityGroup
+  APITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      GroupDescription: Public ELB Security Group with HTTP access on port 80 from
-        the internet
       VpcId: !ImportValue
-        'Fn::Sub': '${NetworkStackName}-VpcId'
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-
-  APIFleet:
-    Type: AWS::AutoScaling::AutoScalingGroup
+             'Fn::Sub': '${NetworkStackName}-VpcId'
+      Port: 80
+      Protocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 4
+  
+  APIListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      AvailabilityZones:
-      - !GetAtt
-        - !ImportValue
-          'Fn::Sub': '${NetworkStackName}-Private-A-SubID'
-        - AvailabilityZone
-      VPCZoneIdentifier:
-        - !ImportValue
-          'Fn::Sub': '${NetworkStackName}-Private-A-SubID'
-      LaunchConfigurationName: !Ref 'APIFleetLaunchConfig'
-      MinSize: '1'
-      MaxSize: '2'
-      DesiredCapacity: 1
-      LoadBalancerNames: [!Ref 'APILoadBalancer']
-
-  APIFleetLaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      IamInstanceProfile:
-        !Ref InstanceProfile
-      ImageId: !Ref LatestAmiId
-      SecurityGroups: [!Ref 'APIFleetSG']
-      InstanceType: t2.micro
-      KeyName: 'KeyName'
-      UserData:
-        Fn::Base64: !Sub |
-           yum install -y vim
-           
-  APIFleetSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow access from load balancer and bastion as well as outbound
-        HTTP and HTTPS traffic
-      VpcId: !ImportValue
-        'Fn::Sub': '${NetworkStackName}-VpcId'
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        SourceSecurityGroupId: !Ref 'APILoadBalancerSG'
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
-        FromPort: '443'
-        ToPort: '443'
-        CidrIp: 0.0.0.0/0
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'APITargetGroup'
+      LoadBalancerArn: !Ref 'APILoadBalancer'
+      Port: 80
+      Protocol: HTTP
 
 Outputs:
   EndpointAddress:
@@ -304,5 +187,8 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-MasterUserName'
   WebURL:
-    Description: URL of the website
+    Description: URL of the web app
     Value: !Join ['', ['http://', !GetAtt [WebLoadBalancer, DNSName]]]
+  APIURL:
+    Description: URL of the api app
+    Value: !Join ['', ['http://', !GetAtt [APILoadBalancer, DNSName]]]
