@@ -1,0 +1,294 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Creates a service and task definition for the apps
+
+Parameters:
+  NetworkStackName:
+    Type: String
+  ClusterStackName:
+    Type: String
+  WebPort:
+    Type: Number
+    Default: 9000
+  APIPort:
+    Type: Number
+    Default: 8000
+
+Resources:
+  EcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: CloudWatch-Metrics-Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource:
+                  - '*'
+
+  EcsExecutionTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+  WebTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: 'web-app'
+          Image: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-WebECRRepoURI'
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: !Ref WebPort
+          MemoryReservation: 512
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref 'WebLogGroup'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: ecs
+              awslogs-datetime-format: '%Y-%m-%d %H:%M:%S'
+          Environment:
+            - Name: PORT
+              Value: !Ref WebPort
+            - Name: API_HOST
+              Value: !ImportValue
+                'Fn::Sub': '${ClusterStackName}-WebURL:${APIPort}'
+      Family: !Ref 'AWS::StackName'
+      TaskRoleArn: !Ref 'EcsTaskRole'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref 'EcsExecutionTaskRole'
+      Cpu: 256
+      Memory: 512
+
+  APITaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Name: 'api-app'
+          Image: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-APIECRRepoURI'
+          Cpu: 256
+          PortMappings:
+            - ContainerPort: !Ref WebPort
+          MemoryReservation: 512
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref 'APILogGroup'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: ecs
+              awslogs-datetime-format: '%Y-%m-%d %H:%M:%S'
+          Environment:
+            - Name: PORT
+              Value: !Ref APIPort
+            - Name: DB
+              Value: 'db'
+            - Name: DBUSER
+              Value: 'appuser'
+            - Name: DBPASS
+              Value: 'apppass'
+            - Name: DBHOST
+              Value: !ImportValue
+                'Fn::Sub': '${ClusterStackName}-EndpointAddress'
+            - Name: DBPORT
+              Value: 5432
+      Family: !Ref 'AWS::StackName'
+      TaskRoleArn: !Ref 'EcsTaskRole'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref 'EcsExecutionTaskRole'
+      Cpu: 256
+      Memory: 512
+
+  WebService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - WebLogGroup
+    Properties:
+      ServiceName: 'web-svc'
+      LaunchType: FARGATE
+      TaskDefinition: !Ref 'WebTaskDefinition'
+      DesiredCount: 2
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-WebTargetGroup'
+          ContainerPort: !Ref 'WebPort'
+          ContainerName: 'web-app'
+      Cluster: !ImportValue
+        'Fn::Sub': '${ClusterStackName}-ClusterName'
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-A-SubID
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-B-SubID
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-C-SubID
+          SecurityGroups:
+            - !Ref 'WebSG'
+
+  APIService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - APILogGroup
+    Properties:
+      ServiceName: 'api-svc'
+      LaunchType: FARGATE
+      TaskDefinition: !Ref 'APITaskDefinition'
+      DesiredCount: 2
+      LoadBalancers:
+        - TargetGroupArn: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-APITargetGroup'
+          ContainerPort: !Ref 'APIPort'
+          ContainerName: 'api-app'
+      Cluster: !ImportValue
+        'Fn::Sub': '${ClusterStackName}-ClusterName'
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-A-SubID
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-B-SubID
+            - Fn::ImportValue:
+                !Sub ${NetworkStackName}-Private-C-SubID
+          SecurityGroups:
+            - !Ref 'APISG'
+
+  WebSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${AWS::StackName}-web-sg'
+      GroupDescription: ECS Allowed Ports
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref WebPort
+          ToPort: !Ref WebPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-A-CIDR
+        - IpProtocol: tcp
+          FromPort: !Ref WebPort
+          ToPort: !Ref WebPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-B-CIDR
+        - IpProtocol: tcp
+          FromPort: !Ref WebPort
+          ToPort: !Ref WebPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-C-CIDR
+
+  APISG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${AWS::StackName}-api-sg'
+      GroupDescription: ECS Allowed Ports
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${NetworkStackName}-VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref APIPort
+          ToPort: !Ref APIPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-A-CIDR
+        - IpProtocol: tcp
+          FromPort: !Ref APIPort
+          ToPort: !Ref APIPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-B-CIDR
+        - IpProtocol: tcp
+          FromPort: !Ref APIPort
+          ToPort: !Ref APIPort
+          CidrIp:
+            Fn::ImportValue:
+              !Sub ${NetworkStackName}-Public-C-CIDR
+
+  WebLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Sub '${AWS::StackName}-web'
+
+  APILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 1
+      LogGroupName: !Sub '${AWS::StackName}-api'
+
+  EcsAutoScaleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: application-autoscaling.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole
+
+  WebScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 4
+      MinCapacity: 1
+      ResourceId: !Sub 'service/${ClusterStackName}/${WebService.Name}'
+      RoleARN: !GetAtt 'EcsAutoScaleRole.Arn'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  APIScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 4
+      MinCapacity: 1
+      ResourceId: !Sub 'service/${ClusterStackName}/${APIService.Name}'
+      RoleARN: !GetAtt 'EcsAutoScaleRole.Arn'
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
