@@ -14,6 +14,9 @@ Parameters:
   APIPort:
     Type: Number
     Default: 8000
+  NetworkCIDR:
+    Type: String
+    Default: '10.11.0.0/24'
 
 Resources:
   EcsTaskRole:
@@ -77,8 +80,11 @@ Resources:
             - Name: PORT
               Value: !Ref WebPort
             - Name: API_HOST
-              Value: !ImportValue
-                'Fn::Sub': '${ClusterStackName}-WebURL:${APIPort}'
+              Value: !Sub
+                - "${uri}:${APIPort}"
+                - uri: !ImportValue
+                    'Fn::Sub': '${ClusterStackName}-WebURL'
+
       Family: !Ref 'AWS::StackName'
       TaskRoleArn: !Ref 'EcsTaskRole'
       NetworkMode: awsvpc
@@ -203,21 +209,15 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref WebPort
           ToPort: !Ref WebPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-A-CIDR
+          CidrIp: !Ref NetworkCIDR
         - IpProtocol: tcp
           FromPort: !Ref WebPort
           ToPort: !Ref WebPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-B-CIDR
+          CidrIp: !Ref NetworkCIDR
         - IpProtocol: tcp
           FromPort: !Ref WebPort
           ToPort: !Ref WebPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-C-CIDR
+          CidrIp: !Ref NetworkCIDR
 
   APISG:
     Type: AWS::EC2::SecurityGroup
@@ -231,21 +231,15 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref APIPort
           ToPort: !Ref APIPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-A-CIDR
+          CidrIp: !Ref NetworkCIDR
         - IpProtocol: tcp
           FromPort: !Ref APIPort
           ToPort: !Ref APIPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-B-CIDR
+          CidrIp: !Ref NetworkCIDR
         - IpProtocol: tcp
           FromPort: !Ref APIPort
           ToPort: !Ref APIPort
-          CidrIp:
-            Fn::ImportValue:
-              !Sub ${NetworkStackName}-Public-C-CIDR
+          CidrIp: !Ref NetworkCIDR
 
   WebLogGroup:
     Type: AWS::Logs::LogGroup

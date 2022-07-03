@@ -216,9 +216,13 @@ Outputs:
   WebURL:
     Description: URL of the web app
     Value: !Join ['', ['http://', !GetAtt [WebLoadBalancer, DNSName]]]
+    Export:
+      Name: !Sub '${AWS::StackName}-WebURL'
   APIURL:
     Description: URL of the api app
     Value: !Join ['', ['http://', !GetAtt [APILoadBalancer, DNSName]]]
+    Export:
+      Name: !Sub '${AWS::StackName}-APIURL'
 
   WebECRRepoURI:
     Description: ECR repo of the web app
