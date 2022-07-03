@@ -59,7 +59,7 @@ Resources:
       VPCSecurityGroups:
         - !Ref PostgresSG
       PubliclyAccessible: false
-  
+
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
@@ -196,6 +196,12 @@ Outputs:
     Value: !Ref DBMasterPass
     Export:
       Name: !Sub '${AWS::StackName}-MasterUserName'
+
+  ClusterName:
+    Description: Name of the cluster to deploy the services to
+    Value: !Ref Cluster
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterName'
 
   WebTargetGroup:
     Description: Target group of the web app
