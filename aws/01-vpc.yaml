@@ -292,3 +292,23 @@ Outputs:
     Value: !Ref PrivateSubnet3
     Export:
       Name: !Sub "${AWS::StackName}-Private-C-SubID"
+  
+  PublicSubnetIds:
+    Description: Public subnet ids
+    Value: !Join
+      - ','
+      - - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+        - !Ref PublicSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-SubIDs"
+  
+  PrivateSubnetIds:
+    Description: Private subnet ids
+    Value: !Join
+      - ','
+      - - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-SubIDs"
