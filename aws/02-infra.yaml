@@ -186,6 +186,16 @@ Outputs:
     Value: !Ref DBMasterPass
     Export:
       Name: !Sub '${AWS::StackName}-MasterUserName'
+  WebTargetGroup:
+    Description: Target group of the web app
+    Value: !Ref WebTargetGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WebTargetGroup'
+  APITargetGroup:
+    Description: Target group of the api app
+    Value: !Ref APITargetGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-APITargetGroup'
   WebURL:
     Description: URL of the web app
     Value: !Join ['', ['http://', !GetAtt [WebLoadBalancer, DNSName]]]
