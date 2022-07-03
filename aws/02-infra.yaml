@@ -149,7 +149,7 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 10
       HealthyThresholdCount: 4
-  
+
   APIListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -159,6 +159,16 @@ Resources:
       LoadBalancerArn: !Ref 'APILoadBalancer'
       Port: 80
       Protocol: HTTP
+
+  WebECRRepo: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: "web-repo"
+
+  APIECRRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "api-repo"
 
 Outputs:
   EndpointAddress:
@@ -186,6 +196,7 @@ Outputs:
     Value: !Ref DBMasterPass
     Export:
       Name: !Sub '${AWS::StackName}-MasterUserName'
+
   WebTargetGroup:
     Description: Target group of the web app
     Value: !Ref WebTargetGroup
@@ -202,3 +213,14 @@ Outputs:
   APIURL:
     Description: URL of the api app
     Value: !Join ['', ['http://', !GetAtt [APILoadBalancer, DNSName]]]
+
+  WebECRRepoURI:
+    Description: ECR repo of the web app
+    Value: !GetAtt WebECRRepo.RepositoryUri
+    Export:
+      Name: !Sub '${AWS::StackName}-WebECRRepoURI'
+  APIECRRepoURI:
+    Description: ECR repo of the api app
+    Value: !GetAtt APIECRRepo.RepositoryUri
+    Export:
+      Name: !Sub '${AWS::StackName}-APIECRRepoURI'
