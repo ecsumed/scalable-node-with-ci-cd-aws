@@ -1,0 +1,87 @@
+---
+Description:
+  "Create any supporting infra: s3, rds, etc..."
+
+Parameters:
+  NetworkStackName:
+    Type: String
+    Description: Name of the Network Stack that was used.
+  DBMasterPass:
+    Type: String
+    Description: Initial db password
+  DBMasterUser:
+    Type: String
+    Description: Initial db user
+  DBName:
+    Type: String
+    Description: Initial db name
+
+Resources:
+  PostgresSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${AWS::StackName} Postgres Access'
+      GroupDescription: Security Group which grants access to Postgres
+      VpcId: !ImportValue
+        'Fn::Sub': '${NetworkStackName}-VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5435
+          CidrIp: 10.11.0.0/24
+
+  PostgresSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub 'Database subnet group for ${AWS::StackName}'
+      SubnetIds:
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-Private-A-SubID'
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-Private-B-SubID'
+        - !ImportValue
+          'Fn::Sub': '${NetworkStackName}-Private-C-SubID'
+
+  Postgres:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 20
+      DBSubnetGroupName: !Ref PostgresSubnetGroup
+      Engine: postgres
+      EngineVersion: 13.4
+      MasterUsername: !Ref DBMasterUser
+      MasterUserPassword: !Ref DBMasterPass
+      DBName: !Ref DBName
+      DBInstanceClass: db.m5.large
+      BackupRetentionPeriod: 1
+      MultiAZ: true
+      VPCSecurityGroups:
+        - !Ref PostgresSG
+      PubliclyAccessible: false
+
+Outputs:
+  EndpointAddress:
+    Description: Connection endpoint of the database
+    Value: !GetAtt Postgres.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-EndpointAddress'
+  EndpointPort:
+    Description: Connection port of the database
+    Value: !GetAtt Postgres.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-EndpointPort'
+  DbInstanceIdentifier:
+    Description: The Database Instance Identifier
+    Value: !Ref Postgres
+    Export:
+      Name: !Sub '${AWS::StackName}-DbInstanceIdentifier'
+  DatabaseName:
+    Description: The Database Instance Identifier
+    Value: !Ref DBName
+    Export:
+      Name: !Sub '${AWS::StackName}-DatabaseName'
+  MasterUserName:
+    Description: The master user name
+    Value: !Ref DBMasterPass
+    Export:
+      Name: !Sub '${AWS::StackName}-MasterUserName'
