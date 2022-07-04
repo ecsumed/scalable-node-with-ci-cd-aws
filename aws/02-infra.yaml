@@ -183,7 +183,7 @@ Resources:
             Id: !Ref 'WebLoadBalancer'
             CustomOriginConfig:
               HTTPPort: '80'
-              OriginProtocolPolicy: 'match-viewer'
+              OriginProtocolPolicy: 'http-only'
         Enabled: true
         DefaultCacheBehavior:
           AllowedMethods:
@@ -214,7 +214,7 @@ Resources:
             Id: !Ref 'APILoadBalancer'
             CustomOriginConfig:
               HTTPPort: '80'
-              OriginProtocolPolicy: 'match-viewer'
+              OriginProtocolPolicy: 'http-only'
         Enabled: true
         DefaultCacheBehavior:
           AllowedMethods:
