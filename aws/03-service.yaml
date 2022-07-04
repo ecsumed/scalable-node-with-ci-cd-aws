@@ -85,7 +85,7 @@ Resources:
                 - uri: !ImportValue
                     'Fn::Sub': '${ClusterStackName}-WebURL'
 
-      Family: !Ref 'AWS::StackName'
+      Family: !Sub '${AWS::StackName}-web'
       TaskRoleArn: !Ref 'EcsTaskRole'
       NetworkMode: awsvpc
       RequiresCompatibilities:
@@ -126,7 +126,7 @@ Resources:
                 'Fn::Sub': '${ClusterStackName}-EndpointAddress'
             - Name: DBPORT
               Value: 5432
-      Family: !Ref 'AWS::StackName'
+      Family: !Sub '${AWS::StackName}-api'
       TaskRoleArn: !Ref 'EcsTaskRole'
       NetworkMode: awsvpc
       RequiresCompatibilities:
