@@ -317,3 +317,9 @@ Outputs:
     Value: !GetAtt APICloudFrontDistribution.DomainName
     Export:
       Name: !Sub '${AWS::StackName}-APICloudFront'
+  
+  CodeRepository:
+    Description: Name of the code repo
+    Value: !GetAtt CodeRepository.Name
+    Export:
+      Name: !Sub '${AWS::StackName}-CodeRepository'
