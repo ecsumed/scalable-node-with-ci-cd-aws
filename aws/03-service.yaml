@@ -90,7 +90,7 @@ Resources:
               Value: !Sub
                 - "${uri}:80"
                 - uri: !ImportValue
-                    'Fn::Sub': '${ClusterStackName}-WebURL'
+                    'Fn::Sub': '${ClusterStackName}-APIURL'
 
       Family: !Sub '${AWS::StackName}-web'
       TaskRoleArn: !Ref 'EcsTaskRole'
