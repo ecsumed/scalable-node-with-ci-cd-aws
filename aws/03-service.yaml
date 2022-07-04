@@ -16,7 +16,7 @@ Parameters:
     Default: 8000
   NetworkCIDR:
     Type: String
-    Default: '10.11.0.0/24'
+    Default: '10.11.0.0/16'
 
 Resources:
   EcsTaskRole:
