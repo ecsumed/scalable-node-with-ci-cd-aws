@@ -103,7 +103,7 @@ Resources:
             'Fn::Sub': '${ClusterStackName}-APIECRRepoURI'
           Cpu: 256
           PortMappings:
-            - ContainerPort: !Ref WebPort
+            - ContainerPort: !Ref APIPort
           MemoryReservation: 512
           LogConfiguration:
             LogDriver: awslogs

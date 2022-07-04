@@ -110,6 +110,7 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 10
       HealthyThresholdCount: 4
+      TargetType: ip
   
   WebListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -149,6 +150,7 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 10
       HealthyThresholdCount: 4
+      TargetType: ip
 
   APIListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
