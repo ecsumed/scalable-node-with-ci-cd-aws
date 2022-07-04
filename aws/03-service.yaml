@@ -41,7 +41,14 @@ Resources:
                   - cloudwatch:PutMetricData
                 Resource:
                   - '*'
-
+              - Effect: Allow
+                Action:
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                Resource:
+                  - '*'
   EcsExecutionTaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -81,7 +88,7 @@ Resources:
               Value: !Ref WebPort
             - Name: API_HOST
               Value: !Sub
-                - "${uri}:${APIPort}"
+                - "${uri}:80"
                 - uri: !ImportValue
                     'Fn::Sub': '${ClusterStackName}-WebURL'
 
@@ -116,11 +123,11 @@ Resources:
             - Name: PORT
               Value: !Ref APIPort
             - Name: DB
-              Value: 'db'
+              Value: 'appdb'
             - Name: DBUSER
-              Value: 'appuser'
+              Value: 'appmasteruser'
             - Name: DBPASS
-              Value: 'apppass'
+              Value: 'password'
             - Name: DBHOST
               Value: !ImportValue
                 'Fn::Sub': '${ClusterStackName}-EndpointAddress'

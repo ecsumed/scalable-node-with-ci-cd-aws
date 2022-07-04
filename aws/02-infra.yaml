@@ -106,10 +106,10 @@ Resources:
              'Fn::Sub': '${NetworkStackName}-VpcId'
       Port: 80
       Protocol: HTTP
-      HealthCheckIntervalSeconds: 30
+      HealthCheckIntervalSeconds: 90
       HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 10
-      HealthyThresholdCount: 4
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 10
       TargetType: ip
   
   WebListener:
@@ -146,10 +146,11 @@ Resources:
              'Fn::Sub': '${NetworkStackName}-VpcId'
       Port: 80
       Protocol: HTTP
-      HealthCheckIntervalSeconds: 30
+      HealthCheckIntervalSeconds: 90
       HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 10
-      HealthyThresholdCount: 4
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 10
+      HealthCheckPath: /api/status
       TargetType: ip
 
   APIListener:
