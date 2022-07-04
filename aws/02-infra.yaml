@@ -235,6 +235,12 @@ Resources:
         HttpVersion: 'http2'
         PriceClass: 'PriceClass_100'
 
+  CodeRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: 'three-tier-node'
+      RepositoryDescription: "ci-cd poc"
+
 Outputs:
   EndpointAddress:
     Description: Connection endpoint of the database
