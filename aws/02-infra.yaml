@@ -29,7 +29,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5435
-          CidrIp: 10.11.0.0/24
+          CidrIp: 10.11.0.0/16
 
   PostgresSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
