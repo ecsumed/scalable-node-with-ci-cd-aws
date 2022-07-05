@@ -149,6 +149,8 @@ Resources:
     Properties:
       ServiceName: 'web-svc'
       LaunchType: FARGATE
+      DeploymentController:
+        Type: CODE_DEPLOY
       TaskDefinition: !Ref 'WebTaskDefinition'
       DesiredCount: 2
       LoadBalancers:
@@ -180,6 +182,8 @@ Resources:
     Properties:
       ServiceName: 'api-svc'
       LaunchType: FARGATE
+      DeploymentController:
+        Type: CODE_DEPLOY
       TaskDefinition: !Ref 'APITaskDefinition'
       DesiredCount: 2
       LoadBalancers:

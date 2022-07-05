@@ -1,0 +1,48 @@
+{
+  "applicationName": "api-codedeploy",
+  "autoRollbackConfiguration": {
+    "enabled": true,
+    "events": ["DEPLOYMENT_FAILURE"]
+  },
+  "blueGreenDeploymentConfiguration": {
+    "deploymentReadyOption": {
+      "actionOnTimeout": "CONTINUE_DEPLOYMENT",
+      "waitTimeInMinutes": 0
+    },
+    "terminateBlueInstancesOnDeploymentSuccess": {
+      "action": "TERMINATE",
+      "terminationWaitTimeInMinutes": 5
+    }
+  },
+  "deploymentGroupName": "api-deploymentgroup",
+  "deploymentStyle": {
+    "deploymentOption": "WITH_TRAFFIC_CONTROL",
+    "deploymentType": "BLUE_GREEN"
+  },
+  "loadBalancerInfo": {
+    "targetGroupPairInfoList": [
+      {
+        "targetGroups": [
+          {
+            "name": "poc-c-APITa-TR1ADWLGYA4D"
+          },
+          {
+            "name": "poc-c-APITa-1ECD2CZNVIUJG"
+          }
+        ],
+        "prodTrafficRoute": {
+          "listenerArns": [
+            "arn:aws:elasticloadbalancing:us-east-1:874439048424:listener/app/poc-c-APILo-1VKR8M0CW0N90/a087999e4aea5dd3/3a865f69df738996"
+          ]
+        }
+      }
+    ]
+  },
+  "serviceRoleArn": "arn:aws:iam::874439048424:role/service-role/CodeDeployServiceRole",
+  "ecsServices": [
+    {
+      "serviceName": "api-svc",
+      "clusterName": "poc-ci-cd-infra"
+    }
+  ]
+}

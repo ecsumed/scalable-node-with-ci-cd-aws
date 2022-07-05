@@ -99,7 +99,20 @@ Resources:
           'Fn::Sub': '${NetworkStackName}-Public-C-SubID'
       SecurityGroups: [!Ref 'LoadBalancerSecurityGroup']
   
-  WebTargetGroup:
+  WebTargetGroup1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !ImportValue
+             'Fn::Sub': '${NetworkStackName}-VpcId'
+      Port: 80
+      Protocol: HTTP
+      HealthCheckIntervalSeconds: 90
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 10
+      TargetType: ip
+  
+  WebTargetGroup2:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       VpcId: !ImportValue
@@ -117,7 +130,7 @@ Resources:
     Properties:
       DefaultActions:
       - Type: forward
-        TargetGroupArn: !Ref 'WebTargetGroup'
+        TargetGroupArn: !Ref 'WebTargetGroup1'
       LoadBalancerArn: !Ref 'WebLoadBalancer'
       Port: '80'
       Protocol: HTTP
@@ -139,7 +152,21 @@ Resources:
         - Key: deletion_protection.enabled
           Value: false
 
-  APITargetGroup:
+  APITargetGroup1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !ImportValue
+             'Fn::Sub': '${NetworkStackName}-VpcId'
+      Port: 80
+      Protocol: HTTP
+      HealthCheckIntervalSeconds: 90
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 30
+      HealthyThresholdCount: 10
+      HealthCheckPath: /api/status
+      TargetType: ip
+  
+  APITargetGroup2:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       VpcId: !ImportValue
@@ -158,7 +185,7 @@ Resources:
     Properties:
       DefaultActions:
       - Type: forward
-        TargetGroupArn: !Ref 'APITargetGroup'
+        TargetGroupArn: !Ref 'APITargetGroup1'
       LoadBalancerArn: !Ref 'APILoadBalancer'
       Port: 80
       Protocol: HTTP
@@ -274,16 +301,66 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-ClusterName'
 
+  WebListenerARN:
+    Description: ARN of the web prod listener
+    Value: !GetAtt WebListener.ListenerArn
+    Export:
+      Name: !Sub '${AWS::StackName}-WebListenerArn'
+  
+  APIListenerARN:
+    Description: ARN of the web prod listener
+    Value: !GetAtt APIListener.ListenerArn
+    Export:
+      Name: !Sub '${AWS::StackName}-APIListenerArn'
+
   WebTargetGroup:
     Description: Target group of the web app
-    Value: !Ref WebTargetGroup
+    Value: !Ref WebTargetGroup1
     Export:
       Name: !Sub '${AWS::StackName}-WebTargetGroup'
+
   APITargetGroup:
     Description: Target group of the api app
-    Value: !Ref APITargetGroup
+    Value: !Ref APITargetGroup1
     Export:
       Name: !Sub '${AWS::StackName}-APITargetGroup'
+  
+  WebTargetGroup2:
+    Description: Target group of the web app
+    Value: !Ref WebTargetGroup2
+    Export:
+      Name: !Sub '${AWS::StackName}-WebTargetGroup2'
+
+  APITargetGroup2:
+    Description: Target group of the api app
+    Value: !Ref APITargetGroup2
+    Export:
+      Name: !Sub '${AWS::StackName}-APITargetGroup2'
+
+  WebTargetGroupName:
+    Description: Target group name of the web app
+    Value: !GetAtt WebTargetGroup1.TargetGroupName
+    Export:
+      Name: !Sub '${AWS::StackName}-WebTargetGroup1Name'
+
+  APITargetGroupName:
+    Description: Target group name of the api app
+    Value: !GetAtt APITargetGroup1.TargetGroupName
+    Export:
+      Name: !Sub '${AWS::StackName}-APITargetGroup1Name'
+
+  WebTargetGroup2Name:
+    Description: Target group name of the web app
+    Value: !GetAtt WebTargetGroup2.TargetGroupName
+    Export:
+      Name: !Sub '${AWS::StackName}-WebTargetGroup2Name'
+
+  APITargetGroup2Name:
+    Description: Target group name of the api app
+    Value: !GetAtt APITargetGroup2.TargetGroupName
+    Export:
+      Name: !Sub '${AWS::StackName}-APITargetGroup2Name'
+
   WebURL:
     Description: URL of the web app
     Value: !Join ['', ['http://', !GetAtt [WebLoadBalancer, DNSName]]]

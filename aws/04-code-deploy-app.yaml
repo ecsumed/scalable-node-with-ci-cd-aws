@@ -1,0 +1,473 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ClusterStackName:
+    Type: String
+  ServiceStackName:
+    Type: String
+
+Resources:
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeDeployServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+       - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+       - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  WebCodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: 'web-codedeploy'
+      ComputePlatform: ECS
+
+  APICodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: 'api-codedeploy'
+      ComputePlatform: ECS
+
+  WebDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref WebCodeDeployApplication
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events: ["DEPLOYMENT_FAILURE"]
+      BlueGreenDeploymentConfiguration:
+        DeploymentReadyOption:
+          ActionOnTimeout: "CONTINUE_DEPLOYMENT"
+          WaitTimeInMinutes: 0
+        TerminateBlueInstancesOnDeploymentSuccess:
+          Action: "TERMINATE"
+          TerminationWaitTimeInMinutes: 5
+      DeploymentGroupName: "web-deploymentgroup"
+      DeploymentStyle:
+        DeploymentOption: "WITH_TRAFFIC_CONTROL"
+        DeploymentType: "BLUE_GREEN"
+
+      LoadBalancerInfo:
+        TargetGroupPairInfoList:
+          - TargetGroups:
+              - Name: !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-WebTargetGroup1Name'
+              - Name: !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-WebTargetGroup2Name'
+            ProdTrafficRoute:
+              ListenerArns:
+                - !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-WebListenerArn'
+
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      ECSServices:
+        - ServiceName: !ImportValue
+            'Fn::Sub': '${ServiceStackName}-WebService'
+          ClusterName: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+
+  APIDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref APICodeDeployApplication
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events: ["DEPLOYMENT_FAILURE"]
+      BlueGreenDeploymentConfiguration:
+        DeploymentReadyOption:
+          ActionOnTimeout: "CONTINUE_DEPLOYMENT"
+          WaitTimeInMinutes: 0
+        TerminateBlueInstancesOnDeploymentSuccess:
+          Action: "TERMINATE"
+          TerminationWaitTimeInMinutes: 5
+      DeploymentGroupName: "api-deploymentgroup"
+      DeploymentStyle:
+        DeploymentOption: "WITH_TRAFFIC_CONTROL"
+        DeploymentType: "BLUE_GREEN"
+
+      LoadBalancerInfo:
+        TargetGroupPairInfoList:
+          - TargetGroups:
+              - Name: !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-APITargetGroup1Name'
+              - Name: !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-APITargetGroup2Name'
+            ProdTrafficRoute:
+              ListenerArns:
+                - !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-APIListenerArn'
+
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      ECSServices:
+        - ServiceName: !ImportValue
+            'Fn::Sub': '${ServiceStackName}-APIService'
+          ClusterName: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeBuildServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      Policies:
+        -
+          PolicyName: CodeBuildAccessPolicies
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+              -
+                Effect: Allow
+                Action:
+                  - codecommit:GitPull
+                Resource:
+                  - !Join
+                    - ':'
+                    - - arn
+                      - aws
+                      - codecommit
+                      - !Ref 'AWS::Region'
+                      - !Ref 'AWS::AccountId'
+                      - !ImportValue
+                        'Fn::Sub': '${ClusterStackName}-CodeRepository'
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  WebArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - WebArtifactsBucket
+      VersioningConfiguration:
+        Status: Enabled
+
+  APIArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - APIArtifactsBucket
+      VersioningConfiguration:
+        Status: Enabled
+
+  WebCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: 'web-app'
+      Artifacts:
+        Location: !Ref 'WebArtifactsBucket'
+        Name: 'web-app.zip'
+        NamespaceType: BUILD_ID
+        Packaging: ZIP
+        Path: 'codebuild'
+        Type: S3
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        PrivilegedMode: true
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        Type: CODECOMMIT
+        Location: !Join
+          - ''
+          - - 'https://git-codecommit.'
+            - !Ref 'AWS::Region'
+            - '.amazonaws.com/v1/repos/'
+            - !ImportValue
+              'Fn::Sub': '${ClusterStackName}-CodeRepository'
+        BuildSpec: 'web/buildspec.yml'
+
+  APICodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: 'api-app'
+      Artifacts:
+        Location: !Ref 'APIArtifactsBucket'
+        Name: 'api-app.zip'
+        NamespaceType: BUILD_ID
+        Packaging: ZIP
+        Path: 'codebuild'
+        Type: S3
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        PrivilegedMode: true
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        Type: CODECOMMIT
+        Location: !Join
+          - ''
+          - - 'https://git-codecommit.'
+            - !Ref 'AWS::Region'
+            - '.amazonaws.com/v1/repos/'
+            - !ImportValue
+              'Fn::Sub': '${ClusterStackName}-CodeRepository'
+        BuildSpec: 'api/buildspec.yml'
+
+  CodePipelineArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-codepipelineartifactstorebucket'
+
+  CodePipelineArtifactStoreBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref CodePipelineArtifactStoreBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DenyUnEncryptedObjectUploads
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource: !Join
+              - ''
+              - - !GetAtt
+                  - CodePipelineArtifactStoreBucket
+                  - Arn
+                - /*
+            Condition:
+              StringNotEquals:
+                's3:x-amz-server-side-encryption': 'aws:kms'
+          - Sid: DenyInsecureConnections
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: !Join
+              - ''
+              - - !GetAtt
+                  - CodePipelineArtifactStoreBucket
+                  - Arn
+                - /*
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: AWS-CodePipeline-Service-3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codecommit:CancelUploadArchive'
+                  - 'codecommit:GetBranch'
+                  - 'codecommit:GetCommit'
+                  - 'codecommit:GetUploadArchiveStatus'
+                  - 'codecommit:UploadArchive'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codedeploy:CreateDeployment'
+                  - 'codedeploy:GetApplication'
+                  - 'codedeploy:GetApplicationRevision'
+                  - 'codedeploy:GetDeployment'
+                  - 'codedeploy:GetDeploymentConfig'
+                  - 'codedeploy:RegisterApplicationRevision'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'devicefarm:ListProjects'
+                  - 'devicefarm:ListDevicePools'
+                  - 'devicefarm:GetRun'
+                  - 'devicefarm:GetUpload'
+                  - 'devicefarm:CreateUpload'
+                  - 'devicefarm:ScheduleRun'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:ListFunctions'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'iam:PassRole'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'elasticbeanstalk:*'
+                  - 'ec2:*'
+                  - 'elasticloadbalancing:*'
+                  - 'autoscaling:*'
+                  - 'cloudwatch:*'
+                  - 's3:*'
+                  - 'sns:*'
+                  - 'cloudformation:*'
+                  - 'rds:*'
+                  - 'sqs:*'
+                  - 'ecs:*'
+                Resource: '*'
+
+  PipelineTriggerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'events.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'codepipeline'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'codepipeline:StartPipelineExecution'
+                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${WebCodePipeline}'
+
+  CodeCommitPipelineTriggerRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      EventPattern:
+        source:
+          - 'aws.codecommit'
+        'detail-type':
+          - 'CodeCommit Repository State Change'
+        resources:
+          - !Join
+            - ':'
+            - - arn
+              - aws
+              - codecommit
+              - !Ref 'AWS::Region'
+              - !Ref 'AWS::AccountId'
+              - !ImportValue
+                'Fn::Sub': '${ClusterStackName}-CodeRepository'
+        detail:
+          referenceType:
+            - branch
+          referenceName:
+            - master
+      State: ENABLED
+      Targets:
+        - Arn: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${WebCodePipeline}'
+          Id: pipeline
+          RoleArn: !GetAtt 'PipelineTriggerRole.Arn'
+
+  WebCodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: 'web-pipeline'
+      ArtifactStore:
+        Type: S3
+        Location: !Ref CodePipelineArtifactStoreBucket
+      RestartExecutionOnUpdate: true
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: FetchSource
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: 1
+              Configuration:
+                RepositoryName: !ImportValue
+                  'Fn::Sub': '${ClusterStackName}-CodeRepository'
+                BranchName: master
+                PollForSourceChanges: false
+              OutputArtifacts:
+                - Name: SourceArtifact
+              RunOrder: 1
+
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: BuildArtifact
+              Configuration:
+                ProjectName: !Ref WebCodeBuildProject
+              RunOrder: 2
+
+        - Name: Approval
+          Actions:
+            - Name: Approval
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: '1'
+              RunOrder: 3
+
+Outputs:
+  WebCodeDeployApplicationName:
+    Value: !Ref WebCodeDeployApplication
+    Description: Name of the codeDeploy application
+    Export:
+      Name: !Sub '${AWS::StackName}-WebCodeDeployApplicationName'
+
+  APICodeDeployApplicationName:
+    Value: !Ref APICodeDeployApplication
+    Description: Name of the codeDeploy application
+    Export:
+      Name: !Sub '${AWS::StackName}-APICodeDeployApplicationName'
