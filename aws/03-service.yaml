@@ -293,3 +293,15 @@ Resources:
       RoleARN: !GetAtt 'EcsAutoScaleRole.Arn'
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
+
+Outputs:
+  WebService:
+    Description: Name of the Web Service
+    Value: !GetAtt WebService.Name
+    Export:
+      Name: !Sub '${AWS::StackName}-WebService'
+  APIService:
+    Description: Name of the API Service
+    Value: !GetAtt APIService.Name
+    Export:
+      Name: !Sub '${AWS::StackName}-APIService'
