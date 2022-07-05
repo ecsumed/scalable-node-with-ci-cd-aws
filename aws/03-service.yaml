@@ -293,6 +293,154 @@ Resources:
       RoleARN: !GetAtt 'EcsAutoScaleRole.Arn'
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
+  
+  WebScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub '${WebService.Name}-ScaleUpPolicy'
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'WebScalableTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            MetricIntervalUpperBound: 10
+            ScalingAdjustment: 2
+          - MetricIntervalLowerBound: 10
+            ScalingAdjustment: 1
+
+  WebScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub '${WebService.Name}-ScaleDownPolicy'
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'WebScalableTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: -10
+            MetricIntervalUpperBound: 0
+            ScalingAdjustment: -10
+          - MetricIntervalUpperBound: -10
+            ScalingAdjustment: -30
+
+  WebCpuUtilAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Cpu utilization alarm for ECS service for high cpu usage
+      AlarmActions:
+        - !Ref 'WebScaleUpPolicy'
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: '120'
+      EvaluationPeriods: '2'
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+        - Name: ServiceName
+          Value: !GetAtt 'WebService.Name'
+
+  WebCpuUtilAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Cpu utilization alarm for ECS service for low cpu usage
+      AlarmActions:
+        - !Ref 'WebScaleDownPolicy'
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: '120'
+      EvaluationPeriods: '2'
+      Threshold: 20
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+        - Name: ServiceName
+          Value: !GetAtt 'WebService.Name'
+  
+  APIScaleUpPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub '${APIService.Name}-ScaleUpPolicy'
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'APIScalableTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            MetricIntervalUpperBound: 10
+            ScalingAdjustment: 2
+          - MetricIntervalLowerBound: 10
+            ScalingAdjustment: 1
+
+  APIScaleDownPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub '${APIService.Name}-ScaleDownPolicy'
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref 'APIScalableTarget'
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: -10
+            MetricIntervalUpperBound: 0
+            ScalingAdjustment: -10
+          - MetricIntervalUpperBound: -10
+            ScalingAdjustment: -30
+
+  APICpuUtilAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Cpu utilization alarm for ECS service for high cpu usage
+      AlarmActions:
+        - !Ref 'APIScaleUpPolicy'
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: '120'
+      EvaluationPeriods: '2'
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+        - Name: ServiceName
+          Value: !GetAtt 'APIService.Name'
+
+  APICpuUtilAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Cpu utilization alarm for ECS service for low cpu usage
+      AlarmActions:
+        - !Ref 'APIScaleDownPolicy'
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Statistic: Average
+      Period: '120'
+      EvaluationPeriods: '2'
+      Threshold: 20
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: ClusterName
+          Value: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+        - Name: ServiceName
+          Value: !GetAtt 'APIService.Name'
 
 Outputs:
   WebService:
