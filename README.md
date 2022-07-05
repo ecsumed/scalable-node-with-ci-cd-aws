@@ -29,3 +29,8 @@ aws cloudformation create-stack --stack-name app-infra --template-body "file://a
 ```
 aws cloudformation create-stack --stack-name poc-ci-cd-apps --template-body "file://aws/03-service.yaml" --parameters ParameterKey=NetworkStackName,ParameterValue=app-vpc ParameterKey=ClusterStackName,ParameterValue=app-infra --capabilities CAPABILITY_IAM
 ```
+
+4. Deploy Code Pipeline
+```
+aws cloudformation create-stack --stack-name poc-ci-cd-apps-pipeline --template-body "file://aws/04-ci-cd.yaml" --parameters ParameterKey=ClusterStackName,ParameterValue=poc-ci-cd-infra ParameterKey=ServiceStackName,ParameterValue=poc-ci-ci-apps --capabilities CAPABILITY_IAM
+```

@@ -1,0 +1,73 @@
+---
+Parameters:
+  ClusterStackName:
+    Type: String
+  ServiceStackName:
+    Type: String
+
+Resources:
+  CodeDeployTrustRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Sid: '1'
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.us-east-1.amazonaws.com
+                - codedeploy.us-west-2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+
+  CodeDeployRolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CodeDeployPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - ecs:*
+      Roles:
+        - !Ref 'CodeDeployTrustRole'
+
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: ECS
+
+  CodeDeploymentConfig:
+    Type: AWS::CodeDeploy::DeploymentConfig
+    Properties:
+      MinimumHealthyHosts:
+        Type: "FLEET_PERCENT"
+        Value: 75
+
+  WebCodeDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      ECSServices:
+        - ClusterName: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+          ServiceName: !ImportValue
+            'Fn::Sub': '${ServiceStackName}-WebService'
+      ServiceRoleArn: !Ref CodeDeployTrustRole
+
+  APICodeDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      ECSServices:
+        - ClusterName: !ImportValue
+            'Fn::Sub': '${ClusterStackName}-ClusterName'
+          ServiceName: !ImportValue
+            'Fn::Sub': '${ServiceStackName}-WebService'
+      ServiceRoleArn: !Ref CodeDeployTrustRole
+
+
+  CodePipelineArtifactStoreBucket:
+    Type: 'AWS::S3::Bucket'
