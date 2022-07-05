@@ -383,6 +383,17 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-APIECRRepoURI'
   
+  WebECRRepo:
+    Description: ECR repo of the web app
+    Value: !Ref WebECRRepo
+    Export:
+      Name: !Sub '${AWS::StackName}-WebECRRepo'
+  APIECRRepo:
+    Description: ECR repo of the api app
+    Value: !Ref APIECRRepo
+    Export:
+      Name: !Sub '${AWS::StackName}-APIECRRepo'
+  
   WebCloudFront:
     Description: URL of cloudfront
     Value: !GetAtt WebCloudFrontDistribution.DomainName
