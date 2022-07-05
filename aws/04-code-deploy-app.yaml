@@ -24,8 +24,9 @@ Resources:
               - sts:AssumeRole
       Path: /service-role/
       ManagedPolicyArns:
-       - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
-       - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
 
   WebCodeDeployApplication:
     Type: AWS::CodeDeploy::Application
@@ -478,6 +479,25 @@ Resources:
                 Provider: Manual
                 Version: '1'
               RunOrder: 3
+
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CodeDeployToECS
+                Version: '1'
+              InputArtifacts:
+                - Name: BuildArtifact
+              OutputArtifacts: []
+              Configuration:
+                ApplicationName: !Ref WebCodeDeployApplication
+                DeploymentGroupName: !Ref WebDeploymentGroup
+                TaskDefinitionTemplatePath: imagedefinitions.json
+              Region: !Ref 'AWS::Region'
+              Namespace: DeployVariables
+              RunOrder: 4
 
 Outputs:
   WebCodeDeployApplicationName:
