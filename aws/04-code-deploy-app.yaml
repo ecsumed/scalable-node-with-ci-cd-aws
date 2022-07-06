@@ -27,6 +27,32 @@ Resources:
         - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
 
+  WebArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - WebArtifactsBucket
+      VersioningConfiguration:
+        Status: Enabled
+
+  APIArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - APIArtifactsBucket
+      VersioningConfiguration:
+        Status: Enabled
+
   WebCodeDeployApplication:
     Type: AWS::CodeDeploy::Application
     Properties:
