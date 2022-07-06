@@ -490,11 +490,16 @@ Resources:
                 Version: '1'
               InputArtifacts:
                 - Name: BuildArtifact
+                - Name: SourceArtifact
               OutputArtifacts: []
               Configuration:
                 ApplicationName: !Ref WebCodeDeployApplication
                 DeploymentGroupName: !Ref WebDeploymentGroup
+                AppSpecTemplateArtifact: SourceArtifact
+                TaskDefinitionTemplateArtifact: BuildArtifact
                 TaskDefinitionTemplatePath: imagedefinitions.json
+                Image1ArtifactName: BuildArtifact
+                Image1ContainerName: web-app
               Region: !Ref 'AWS::Region'
               Namespace: DeployVariables
               RunOrder: 4
