@@ -149,7 +149,7 @@ Resources:
 - TargetService:
     Type: AWS::ECS::Service
     Properties:
-      TaskDefinition: ${TASK_DEFINITION_ARN}
+      TaskDefinition: <TASK_DEFINITION>
       LoadBalancerInfo:
         ContainerName: ${CONTAINER_NAME}
         ContainerPort: ${CONTAINER_PORT}
@@ -261,10 +261,10 @@ function ecs_deploy {
   echo "Created"
   echo
 
-  echo "Register new task definition from file $TASK_DEF_FILENAME"
-  register_task_def
-  echo "Registered"
-  echo
+  # echo "Register new task definition from file $TASK_DEF_FILENAME"
+  # register_task_def
+  # echo "Registered"
+  # echo
     
   echo "Getting required appspec info from the task definition for the service $service"
   get_latest_app_spec_info
