@@ -26,7 +26,6 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
 
   WebCodeDeployApplication:
     Type: AWS::CodeDeploy::Application
@@ -163,6 +162,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
 
   WebArtifactsBucket:
     Type: AWS::S3::Bucket
