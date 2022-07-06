@@ -461,7 +461,7 @@ Resources:
                 - Name: SourceArtifact
               RunOrder: 1
 
-        - Name: Web Build
+        - Name: Web-Build
           Actions:
             - Name: Build
               ActionTypeId:
@@ -477,7 +477,7 @@ Resources:
                 ProjectName: !Ref WebCodeBuildProject
               RunOrder: 2
 
-        - Name: API Build
+        - Name: API-Build
           Actions:
             - Name: Build
               ActionTypeId:
@@ -503,7 +503,7 @@ Resources:
                 Version: '1'
               RunOrder: 4
 
-        - Name: Deploy Web
+        - Name: Deploy-Web
           Actions:
             - Name: Deploy
               ActionTypeId:
@@ -527,7 +527,7 @@ Resources:
               Namespace: DeployVariables
               RunOrder: 5
 
-        - Name: Deploy API
+        - Name: Deploy-API
           Actions:
             - Name: Deploy
               ActionTypeId:
@@ -548,7 +548,7 @@ Resources:
                 Image1ArtifactName: APIBuildArtifact
                 Image1ContainerName: "IMAGE1_NAME"
               Region: !Ref 'AWS::Region'
-              Namespace: DeployVariables
+              Namespace: APIVariables
               RunOrder: 6
 
 Outputs:
