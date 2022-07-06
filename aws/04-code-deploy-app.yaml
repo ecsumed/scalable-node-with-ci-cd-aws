@@ -162,7 +162,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
-        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
 
   WebArtifactsBucket:
     Type: AWS::S3::Bucket
