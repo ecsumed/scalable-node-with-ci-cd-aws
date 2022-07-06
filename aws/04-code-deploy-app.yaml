@@ -497,7 +497,6 @@ Resources:
                 Version: '1'
               InputArtifacts:
                 - Name: BuildArtifact
-                - Name: SourceArtifact
               OutputArtifacts: []
               Configuration:
                 ApplicationName: !Ref WebCodeDeployApplication
@@ -505,7 +504,7 @@ Resources:
                 AppSpecTemplateArtifact: BuildArtifact
                 AppSpecTemplatePath: appspec.yaml
                 TaskDefinitionTemplateArtifact: BuildArtifact
-                TaskDefinitionTemplatePath: imagedefinitions.json
+                TaskDefinitionTemplatePath: task_def.json
                 Image1ArtifactName: BuildArtifact
                 Image1ContainerName: web-app
               Region: !Ref 'AWS::Region'
