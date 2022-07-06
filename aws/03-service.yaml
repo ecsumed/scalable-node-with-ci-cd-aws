@@ -297,7 +297,7 @@ Resources:
       RoleARN: !GetAtt 'EcsAutoScaleRole.Arn'
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
-  
+
   WebScaleUpPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Properties:
@@ -338,6 +338,7 @@ Resources:
       AlarmDescription: Cpu utilization alarm for ECS service for high cpu usage
       AlarmActions:
         - !Ref 'WebScaleUpPolicy'
+        - !Ref SNSTopicEmail
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Statistic: Average
@@ -358,6 +359,7 @@ Resources:
       AlarmDescription: Cpu utilization alarm for ECS service for low cpu usage
       AlarmActions:
         - !Ref 'WebScaleDownPolicy'
+        - !Ref SNSTopicEmail
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Statistic: Average
@@ -371,7 +373,7 @@ Resources:
             'Fn::Sub': '${ClusterStackName}-ClusterName'
         - Name: ServiceName
           Value: !GetAtt 'WebService.Name'
-  
+
   APIScaleUpPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Properties:
@@ -412,6 +414,7 @@ Resources:
       AlarmDescription: Cpu utilization alarm for ECS service for high cpu usage
       AlarmActions:
         - !Ref 'APIScaleUpPolicy'
+        - !Ref SNSTopicEmail
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Statistic: Average
@@ -432,6 +435,7 @@ Resources:
       AlarmDescription: Cpu utilization alarm for ECS service for low cpu usage
       AlarmActions:
         - !Ref 'APIScaleDownPolicy'
+        - !Ref SNSTopicEmail
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Statistic: Average
@@ -445,6 +449,13 @@ Resources:
             'Fn::Sub': '${ClusterStackName}-ClusterName'
         - Name: ServiceName
           Value: !GetAtt 'APIService.Name'
+
+  SNSTopicEmail:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      Subscription:
+        - Endpoint: "ecsumed@yahoo.com"
+          Protocol: "email"
 
 Outputs:
   WebService:
