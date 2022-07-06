@@ -15,6 +15,8 @@ docker-compose up --build
 ```
 
 ## Setup
+0. Clone repo
+
 1. Deploy VPC
 ```
 aws cloudformation create-stack --stack-name app-vpc --template-body "file://aws/01-vpc.yaml" --parameters ParameterKey=Env,ParameterValue=prod
@@ -31,6 +33,8 @@ aws cloudformation create-stack --stack-name app-infra --template-body "file://a
 ```
 aws cloudformation create-stack --stack-name poc-ci-cd-apps --template-body "file://aws/03-service.yaml" --parameters ParameterKey=NetworkStackName,ParameterValue=app-vpc ParameterKey=ClusterStackName,ParameterValue=app-infra --capabilities CAPABILITY_IAM
 ```
+
+**NOTE**: _After this step_, *we'll need to modify the buildspecs.yaml of each app and the change the service name*.
 
 4. Deploy Code Pipeline
 ```
