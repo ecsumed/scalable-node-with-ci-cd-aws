@@ -506,7 +506,7 @@ Resources:
                 TaskDefinitionTemplateArtifact: BuildArtifact
                 TaskDefinitionTemplatePath: imagedefinitions.json
                 Image1ArtifactName: BuildArtifact
-                Image1ContainerName: web-app
+                Image1ContainerName: IMAGE
               Region: !Ref 'AWS::Region'
               Namespace: DeployVariables
               RunOrder: 4
