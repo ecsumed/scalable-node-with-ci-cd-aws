@@ -403,7 +403,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: 'codepipeline:StartPipelineExecution'
-                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${WebCodePipeline}'
+                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CICDCodePipeline}'
 
   CodeCommitPipelineTriggerRule:
     Type: 'AWS::Events::Rule'
@@ -430,14 +430,14 @@ Resources:
             - master
       State: ENABLED
       Targets:
-        - Arn: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${WebCodePipeline}'
+        - Arn: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CICDCodePipeline}'
           Id: pipeline
           RoleArn: !GetAtt 'PipelineTriggerRole.Arn'
 
-  WebCodePipeline:
+  CICDCodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: 'web-pipeline'
+      Name: 'ci-cd'
       ArtifactStore:
         Type: S3
         Location: !Ref CodePipelineArtifactStoreBucket
@@ -461,7 +461,7 @@ Resources:
                 - Name: SourceArtifact
               RunOrder: 1
 
-        - Name: Build
+        - Name: Web Build
           Actions:
             - Name: Build
               ActionTypeId:
@@ -472,10 +472,26 @@ Resources:
               InputArtifacts:
                 - Name: SourceArtifact
               OutputArtifacts:
-                - Name: BuildArtifact
+                - Name: WebBuildArtifact
               Configuration:
                 ProjectName: !Ref WebCodeBuildProject
               RunOrder: 2
+
+        - Name: API Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: APIBuildArtifact
+              Configuration:
+                ProjectName: !Ref APICodeBuildProject
+              RunOrder: 3
 
         - Name: Approval
           Actions:
@@ -485,9 +501,9 @@ Resources:
                 Owner: AWS
                 Provider: Manual
                 Version: '1'
-              RunOrder: 3
+              RunOrder: 4
 
-        - Name: Deploy
+        - Name: Deploy Web
           Actions:
             - Name: Deploy
               ActionTypeId:
@@ -496,20 +512,44 @@ Resources:
                 Provider: CodeDeployToECS
                 Version: '1'
               InputArtifacts:
-                - Name: BuildArtifact
+                - Name: WebBuildArtifact
               OutputArtifacts: []
               Configuration:
                 ApplicationName: !Ref WebCodeDeployApplication
                 DeploymentGroupName: !Ref WebDeploymentGroup
-                AppSpecTemplateArtifact: BuildArtifact
+                AppSpecTemplateArtifact: WebBuildArtifact
                 AppSpecTemplatePath: appspec.yaml
-                TaskDefinitionTemplateArtifact: BuildArtifact
+                TaskDefinitionTemplateArtifact: WebBuildArtifact
                 TaskDefinitionTemplatePath: taskdef.json
-                Image1ArtifactName: BuildArtifact
+                Image1ArtifactName: WebBuildArtifact
                 Image1ContainerName: "IMAGE1_NAME"
               Region: !Ref 'AWS::Region'
               Namespace: DeployVariables
-              RunOrder: 4
+              RunOrder: 5
+
+        - Name: Deploy API
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CodeDeployToECS
+                Version: '1'
+              InputArtifacts:
+                - Name: APIBuildArtifact
+              OutputArtifacts: []
+              Configuration:
+                ApplicationName: !Ref APICodeDeployApplication
+                DeploymentGroupName: !Ref APIDeploymentGroup
+                AppSpecTemplateArtifact: APIBuildArtifact
+                AppSpecTemplatePath: appspec.yaml
+                TaskDefinitionTemplateArtifact: APIBuildArtifact
+                TaskDefinitionTemplatePath: taskdef.json
+                Image1ArtifactName: APIBuildArtifact
+                Image1ContainerName: "IMAGE1_NAME"
+              Region: !Ref 'AWS::Region'
+              Namespace: DeployVariables
+              RunOrder: 6
 
 Outputs:
   WebCodeDeployApplicationName:
