@@ -136,6 +136,12 @@ function register_task_def() {
   NEW_TASK_DEFINITION=$(aws ecs register-task-definition --cli-input-json "file://$TASK_DEF_FILENAME")
 }
 
+function get_latest_app_spec_info() {
+  get_latest_task_definition
+  CONTAINER_NAME=$(cat task_def.json | jq '.containerDefinitions[0].name' -r)
+  CONTAINER_PORT=$(cat task_def.json | jq '.containerDefinitions[0].portMappings[0].containerPort' -r)
+}
+
 function create_app_spec_file() {
   echo "---
 version: 1
@@ -145,8 +151,8 @@ Resources:
     Properties:
       TaskDefinition: ${TASK_DEFINITION_ARN}
       LoadBalancerInfo:
-        ContainerName: ${service}
-        ContainerPort: 80
+        ContainerName: ${CONTAINER_NAME}
+        ContainerPort: ${CONTAINER_PORT}
 " > $APPSPEC_FILENAME
 }
 
@@ -260,8 +266,8 @@ function ecs_deploy {
   echo "Registered"
   echo
     
-  echo "Getting latest task definition for the service $service"
-  get_latest_task_definition
+  echo "Getting required appspec info from the task definition for the service $service"
+  get_latest_app_spec_info
   echo "Task definition ARN: $TASK_DEFINITION_ARN"
   echo
 
