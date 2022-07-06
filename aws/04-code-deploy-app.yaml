@@ -165,32 +165,6 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
         - arn:aws:iam::aws:policy/AmazonECS_FullAccess
 
-  WebArtifactsBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Join
-            - '-'
-            - - !Ref 'AWS::StackName'
-              - WebArtifactsBucket
-      VersioningConfiguration:
-        Status: Enabled
-
-  APIArtifactsBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Join
-            - '-'
-            - - !Ref 'AWS::StackName'
-              - APIArtifactsBucket
-      VersioningConfiguration:
-        Status: Enabled
-
   WebCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -275,8 +249,16 @@ Resources:
 
   CodePipelineArtifactStoreBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
     Properties:
-      BucketName: !Sub '${AWS::StackName}-codepipelineartifactstorebucket'
+      Tags:
+        - Key: Name
+          Value: !Join
+            - '-'
+            - - !Ref 'AWS::StackName'
+              - CodePipelineArtifactStoreBucket
+      VersioningConfiguration:
+        Status: Enabled
 
   CodePipelineArtifactStoreBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
