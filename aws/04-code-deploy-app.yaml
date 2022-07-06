@@ -496,6 +496,7 @@ Resources:
                 ApplicationName: !Ref WebCodeDeployApplication
                 DeploymentGroupName: !Ref WebDeploymentGroup
                 AppSpecTemplateArtifact: SourceArtifact
+                AppSpecTemplatePath: web/appspec.yaml
                 TaskDefinitionTemplateArtifact: BuildArtifact
                 TaskDefinitionTemplatePath: imagedefinitions.json
                 Image1ArtifactName: BuildArtifact
