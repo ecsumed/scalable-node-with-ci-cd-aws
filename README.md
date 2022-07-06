@@ -14,7 +14,7 @@ The folders `web` and `api` respectively describe how to install and run each ap
 docker-compose up --build
 ```
 
-## Setup
+## Initial Setup
 0. Clone repo
 
 1. Deploy VPC
