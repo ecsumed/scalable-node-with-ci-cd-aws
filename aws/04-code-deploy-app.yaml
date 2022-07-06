@@ -441,7 +441,7 @@ Resources:
       ArtifactStore:
         Type: S3
         Location: !Ref CodePipelineArtifactStoreBucket
-      RestartExecutionOnUpdate: true
+      RestartExecutionOnUpdate: false
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       Stages:
         - Name: Source
@@ -506,7 +506,7 @@ Resources:
                 TaskDefinitionTemplateArtifact: BuildArtifact
                 TaskDefinitionTemplatePath: imagedefinitions.json
                 Image1ArtifactName: BuildArtifact
-                Image1ContainerName: IMAGE
+                Image1ContainerName: "IMAGE1_NAME"
               Region: !Ref 'AWS::Region'
               Namespace: DeployVariables
               RunOrder: 4

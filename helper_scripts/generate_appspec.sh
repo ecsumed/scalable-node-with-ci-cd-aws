@@ -20,7 +20,7 @@ set -e
 ####################################################################
 
 readonly APPSPEC_FILENAME="appspec.yaml"
-readonly TASK_DEF_FILENAME="task_def.json"
+readonly TASK_DEF_FILENAME="taskdef.json"
 
 function print_usage {
   echo
@@ -138,8 +138,8 @@ function register_task_def() {
 
 function get_latest_app_spec_info() {
   get_latest_task_definition
-  CONTAINER_NAME=$(cat task_def.json | jq '.containerDefinitions[0].name' -r)
-  CONTAINER_PORT=$(cat task_def.json | jq '.containerDefinitions[0].portMappings[0].containerPort' -r)
+  CONTAINER_NAME=$(cat $TASK_DEF_FILENAME | jq '.containerDefinitions[0].name' -r)
+  CONTAINER_PORT=$(cat $TASK_DEF_FILENAME  | jq '.containerDefinitions[0].portMappings[0].containerPort' -r)
 }
 
 function create_app_spec_file() {
@@ -149,7 +149,7 @@ Resources:
 - TargetService:
     Type: AWS::ECS::Service
     Properties:
-      TaskDefinition: <TASK_DEFINITION>
+      TaskDefinition: TASK_DEFINITION
       LoadBalancerInfo:
         ContainerName: ${CONTAINER_NAME}
         ContainerPort: ${CONTAINER_PORT}
