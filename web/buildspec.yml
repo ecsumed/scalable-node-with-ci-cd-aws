@@ -10,7 +10,6 @@ phases:
       - echo Build started on `date`
       - TAG="$(date +%Y-%m-%d.%H.%M.%S)"
       - echo Building the Docker image...
-      - pwd
       - cd web
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG      
