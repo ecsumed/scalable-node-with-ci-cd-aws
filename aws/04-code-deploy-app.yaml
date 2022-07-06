@@ -504,7 +504,7 @@ Resources:
                 AppSpecTemplateArtifact: BuildArtifact
                 AppSpecTemplatePath: appspec.yaml
                 TaskDefinitionTemplateArtifact: BuildArtifact
-                TaskDefinitionTemplatePath: imagedefinitions.json
+                TaskDefinitionTemplatePath: taskdef.json
                 Image1ArtifactName: BuildArtifact
                 Image1ContainerName: "IMAGE1_NAME"
               Region: !Ref 'AWS::Region'
