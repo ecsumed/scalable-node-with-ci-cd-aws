@@ -217,6 +217,9 @@ Resources:
               'Fn::Sub': '${ClusterStackName}-WebECRRepo'
           - Name: IMAGE_TAG
             Value: 'latest'
+          - Name: CLUSTER_NAME
+            Value: !ImportValue
+              'Fn::Sub': '${ClusterStackName}-ClusterName'
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
         Type: CODECOMMIT
@@ -255,6 +258,9 @@ Resources:
               'Fn::Sub': '${ClusterStackName}-APIECRRepo'
           - Name: IMAGE_TAG
             Value: 'latest'
+          - Name: CLUSTER_NAME
+            Value: !ImportValue
+              'Fn::Sub': '${ClusterStackName}-ClusterName'
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
         Type: CODECOMMIT
