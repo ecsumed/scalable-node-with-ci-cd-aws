@@ -147,6 +147,10 @@ Resources:
               -
                 Effect: Allow
                 Action:
+                  - ecr:*
+              -
+                Effect: Allow
+                Action:
                   - codecommit:GitPull
                 Resource:
                   - !Join
