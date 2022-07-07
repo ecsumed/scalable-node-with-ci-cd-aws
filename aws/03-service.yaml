@@ -17,6 +17,16 @@ Parameters:
   NetworkCIDR:
     Type: String
     Default: '10.11.0.0/16'
+  DBMasterPass:
+    Type: String
+    Description: Initial db password
+    NoEcho: true
+  DBMasterUser:
+    Type: String
+    Description: Initial db user
+  DBName:
+    Type: String
+    Description: Initial db name
 
 Resources:
   EcsTaskRole:
@@ -123,11 +133,11 @@ Resources:
             - Name: PORT
               Value: !Ref APIPort
             - Name: DB
-              Value: 'appdb'
+              Value: !Ref DBName
             - Name: DBUSER
-              Value: 'appmasteruser'
+              Value: !Ref DBMasterUser
             - Name: DBPASS
-              Value: 'password'
+              Value: !Ref DBMasterPass
             - Name: DBHOST
               Value: !ImportValue
                 'Fn::Sub': '${ClusterStackName}-EndpointAddress'

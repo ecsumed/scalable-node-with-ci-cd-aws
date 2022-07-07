@@ -45,7 +45,7 @@ aws cloudformation create-stack --stack-name app-infra --template-body "file://a
 
 3. Deploy App Service
 ```
-aws cloudformation create-stack --stack-name poc-ci-cd-apps --template-body "file://aws/03-service.yaml" --parameters ParameterKey=NetworkStackName,ParameterValue=app-vpc ParameterKey=ClusterStackName,ParameterValue=app-infra --capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name app --template-body "file://aws/03-service.yaml" --parameters ParameterKey=NetworkStackName,ParameterValue=vpc ParameterKey=ClusterStackName,ParameterValue=infra ParameterKey=DBMasterUser,ParameterValue=appmasteruser ParameterKey=DBMasterPass,ParameterValue=password ParameterKey=DBName,ParameterValue=appdb --capabilities CAPABILITY_IAM
 ```
 
 **NOTE**: _After this step_, *we'll need to modify the buildspecs.yaml of each app and the change the service name*.
