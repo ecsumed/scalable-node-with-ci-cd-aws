@@ -9,7 +9,21 @@ web <=> api <=> db
 
 The folders `web` and `api` respectively describe how to install and run each app.
 
+# Description
+This repo is a fully functional dockerized 3 tier nodejs app. With minor changes, nodejs
+can be replace with any other language.
+
+The architecture is built on AWS. It is fully automated and scalable. CI/CD is also fully
+automated. It uses a Blue/Green strategy for deployments.
+
+Some services that it uses are Cloudfront, ALB, ECS Fargate, RDS Postgres,
+Cloudwatch, S3, CodeBuild, CodeDeploy, CodeCommit and Code Pipeline.
+
+## Architecture
+![Diagram](arch/high-level-arch.drawio.png "Architecture")
+
 ##  Local testing (using docker compose)
+Just run:
 ```
 docker-compose up --build
 ```
